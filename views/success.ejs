@@ -48,6 +48,15 @@
               Drive
             </h3>
 
+            <% if (success) { %>
+              <div class="alert alert-success alert-dismissible">
+                <a href="#" class="close" data-dismiss="alert" aria-label="close"
+                  >×</a
+                >
+                <strong>Success!</strong> Your Image File is Uploaded.
+              </div>
+              <%}%>
+
             <form action="/upload" method="POST" enctype="multipart/form-data">
               <div class="form-group">
                 <input

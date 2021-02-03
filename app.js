@@ -1,4 +1,5 @@
 const express = require("express");
+const fs = require('fs')
 
 const app = express();
 
@@ -66,7 +67,7 @@ app.get("/", (req, res) => {
             name = response.data.name
             pic = response.data.picture
 
-            res.render('success', {name: name, pic: pic})
+            res.render('success', {name: name, pic: pic, success: false})
         })
     }
 });
@@ -98,8 +99,42 @@ app.post('/upload', (req,res) => {
     upload(req, res, function(err) {
         if(err) throw err
         console.log("file: ", req.file.path)
+        console.log("name: ", req.file.filename)
 
+        const drive = google.drive({
+            version: "v3",
+            auth: oAuth2Client
+        })
+
+        const filemetadata = {
+            name: req.file.filename
+        }
+
+        const media = {
+            mimeType: req.file.mimetype,
+            body: fs.createReadStream(req.file.path)
+        }
+
+        drive.files.create({
+            resource: filemetadata,
+            media: media,
+            fields: "id"
+        }, (err, file) => {
+            if (err) throw err
+
+            console.log("after: ", file)
+
+            // delete the file images folder
+
+            fs.unlinkSync(req.file.path)
+            res.render("success", { name: name, pic: pic, success: true})
+        })
     })
+})
+
+app.get("/logout", (req,res) => {
+    authed = false
+    res.redirect('/')
 })
 
 app.listen(5000, () => {
