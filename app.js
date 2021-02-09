@@ -8,7 +8,7 @@ const app = express();
 
 const multer = require("multer");
 
-const { google } = require("googleapis");
+const { google, Auth } = require("googleapis");
 
 const OAuth2Data = require("./credentials.json");
 
@@ -24,7 +24,15 @@ const oAuth2Client = new google.auth.OAuth2(
   REDIRECT_URI
 );
 
-var authed = false;
+let AUTHED = undefined;
+
+const loginStatus = () => {
+  return AUTHED;
+};
+
+const setLoginStatus = (authed) => {
+  AUTHED = authed;
+};
 
 var Storage = multer.diskStorage({
   destination: function (req, file, callback) {
@@ -59,16 +67,17 @@ app.use(bodyParser.json());
 
 // api routes
 app.use("/api/user", require("./api/user"));
+app.use("/api/folder", require("./api/folder"));
 
 app.get("/", (req, res) => {
-  if (!authed) {
+  if (!loginStatus()) {
     var url = oAuth2Client.generateAuthUrl({
       access_type: "offline",
       scope: SCOPES,
     });
     console.log(url);
 
-    res.render("index", { url: url });
+    res.render("index", { url: url, clientID: CLIENT_ID });
   } else {
     var oauth2 = google.oauth2({
       auth: oAuth2Client,
@@ -104,7 +113,7 @@ app.get("/google/callback", (req, res) => {
         console.log(tokens);
         oAuth2Client.setCredentials(tokens);
 
-        authed = true;
+        setLoginStatus(true);
 
         res.redirect("/");
       }
@@ -123,8 +132,11 @@ app.post("/upload", (req, res) => {
       auth: oAuth2Client,
     });
 
+    var folderId = "1FC5OAoz8bud4TGCjjaEyIzwJvJE4nSHY";
+
     const filemetadata = {
       name: req.file.filename,
+      parents: [folderId],
     };
 
     const media = {
@@ -152,8 +164,58 @@ app.post("/upload", (req, res) => {
   });
 });
 
+app.post("/createfolder", (req, res) => {
+  const { folderName } = req.body;
+
+  const drive = google.drive({
+    version: "v3",
+    auth: oAuth2Client,
+  });
+
+  var permission = {
+    type: "anyone",
+    role: "writer",
+  };
+
+  var fileMetadata = {
+    name: folderName,
+    mimeType: "application/vnd.google-apps.folder",
+    // starred: true,
+    // permissions: [permission]
+  };
+
+  drive.files.create(
+    {
+      resource: fileMetadata,
+      fields: "id",
+    },
+    function (err, file) {
+      if (err) {
+        // Handle error
+        console.error(err);
+      } else {
+        console.log("Folder Id: ", file.data.id);
+        drive.permissions.create(
+          {
+            fileId: file.data.id,
+            requestBody: permission,
+            fields: "id",
+          },
+          function (err, file) {
+            if (err) throw err;
+            else console.log("done");
+          }
+        );
+      }
+    }
+  );
+
+  console.log("name: ", folderName);
+});
+
 app.get("/logout", (req, res) => {
-  authed = false;
+  setLoginStatus(false);
+  oAuth2Client.setCredentials(undefined);
   res.redirect("/");
 });
 
