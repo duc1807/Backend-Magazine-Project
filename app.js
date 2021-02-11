@@ -3,6 +3,7 @@ const fs = require("fs");
 const bodyParser = require("body-parser");
 const path = require("path");
 var cors = require("cors");
+const async = require("async")
 
 const app = express();
 
@@ -103,6 +104,7 @@ app.get("/google/callback", (req, res) => {
   const code = req.query.code;
 
   if (code) {
+    console.log("codee: ", code);
     // get access token
     oAuth2Client.getToken(code, (err, tokens) => {
       if (err) {
@@ -172,10 +174,20 @@ app.post("/createfolder", (req, res) => {
     auth: oAuth2Client,
   });
 
-  var permission = {
-    type: "anyone",
-    role: "writer",
-  };
+  var permissions = [
+    {
+      kind: "drive#permission",
+      type: "user",
+      role: "writer",
+      emailAddress: "trungduc.dev@gmail.com",
+    },
+    {
+      kind: "drive#permission",
+      type: "user",
+      role: "writer",
+      emailAddress: "ducdtgch18799@fpt.edu.vn",
+    },
+  ];
 
   var fileMetadata = {
     name: folderName,
@@ -195,17 +207,33 @@ app.post("/createfolder", (req, res) => {
         console.error(err);
       } else {
         console.log("Folder Id: ", file.data.id);
-        drive.permissions.create(
-          {
-            fileId: file.data.id,
-            requestBody: permission,
-            fields: "id",
-          },
-          function (err, file) {
-            if (err) throw err;
-            else console.log("done");
+
+        async.eachSeries(permissions, (permission, callback) => {
+          drive.permissions.create(
+            {
+              fileId: file.data.id,
+              requestBody: permission,
+              fields: "id",
+            },
+            function (err, file) {
+              if (err) {
+                console.error(err);
+                callback(err);
+              } else {
+                console.log("done");
+                callback(err);
+              }
+            }
+          );
+        }, (err) => {
+          if (err) {
+            // Handle error
+            console.error(err);
+          } else {
+            // All permissions inserted
+            console.log("All permissions inserted");
           }
-        );
+        });
       }
     }
   );
