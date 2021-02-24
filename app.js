@@ -35,6 +35,16 @@ const setLoginStatus = (authed) => {
   AUTHED = authed;
 };
 
+let tokenn = undefined
+
+const getTokenn = () => {
+  return tokenn;
+};
+
+const setTokenn = (tkn) => {
+  tokenn = tkn;
+};
+
 var Storage = multer.diskStorage({
   destination: function (req, file, callback) {
     callback(null, "./images");
@@ -71,7 +81,9 @@ app.use("/api/user", require("./api/user"));
 app.use("/api/folder", require("./api/folder"));
 
 app.get("/", (req, res) => {
-  if (!loginStatus()) {
+  let status = loginStatus()
+  if (!status) {
+    console.log("chua loginn")
     var url = oAuth2Client.generateAuthUrl({
       access_type: "offline",
       scope: SCOPES,
@@ -112,7 +124,8 @@ app.get("/google/callback", (req, res) => {
         console.log(err);
       } else {
         console.log("Authentication successful");
-        console.log(tokens);
+        console.log(tokens.access_token);
+        setTokenn(tokens.access_token)
         oAuth2Client.setCredentials(tokens);
 
         setLoginStatus(true);
@@ -193,7 +206,6 @@ app.post("/createfolder", (req, res) => {
     name: folderName,
     mimeType: "application/vnd.google-apps.folder",
     // starred: true,
-    // permissions: [permission]
   };
 
   drive.files.create(
@@ -214,6 +226,7 @@ app.post("/createfolder", (req, res) => {
               fileId: file.data.id,
               requestBody: permission,
               fields: "id",
+              sendNotificationEmail: false
             },
             function (err, file) {
               if (err) {
@@ -242,9 +255,12 @@ app.post("/createfolder", (req, res) => {
 });
 
 app.get("/logout", (req, res) => {
-  setLoginStatus(false);
-  oAuth2Client.setCredentials(undefined);
-  res.redirect("/");
+      setLoginStatus(false);
+      oAuth2Client.setCredentials(null)
+      // const tokenn = getTokenn()
+      // oAuth2Client.revokeToken(tokenn)
+      res.redirect("/");
+  
 });
 
 app.listen(5000, () => {

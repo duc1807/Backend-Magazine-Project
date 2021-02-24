@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <script src="https://apis.google.com/js/platform.js?onload=init" async defer></script>
     <title>Node Authentication</title>
     <link
       rel="stylesheet"
@@ -91,11 +92,21 @@
                 </button>
               </div>
             </form>
+
+            <a href="#" onclick="signOut();">Sign out</a>
           </div>
         </div>
       </div>
     </div>
   </body>
+  <script>
+    function signOut() {
+      var auth2 = gapi.auth2.getAuthInstance();
+      auth2.signOut().then(function () {
+        console.log('User signed out.');
+      });
+    }
+  </script>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
   <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
 </html>
